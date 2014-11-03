@@ -22,6 +22,13 @@ def Start_timer(channel):
 	"""
 	global starttime
 	global SomeoneDriving
+	global PinBarrierRight
+	global PinBarrierStart
+	global PinGreen
+	global PinRed
+	global online
+	global debugging
+	
 	starttime=time.time()
 	print("Start")
 	GPIO.add_event_detect(PinBarrierRight, GPIO.FALLING, callback=Stop_timer, bouncetime=200)
@@ -49,6 +56,17 @@ def Stop_timer(channel): #Stops timer and evaluates results
 	global GDOCS_SPREADSHEET_NAME
 	global Driver
 	global SomeoneDriving
+	global logfile
+	global Track
+	global CarNumber
+	global Car
+	global Lap
+	global List_of_etimes
+	global online
+	global debugging
+	global PinBarrierRight
+	global PinResetLap
+	
 	if debugging:
 		print('Stop detected')
 	print("Stop")
@@ -88,15 +106,20 @@ def Stop_timer(channel): #Stops timer and evaluates results
 	if debugging:
 		print('Terminated STOP detection.')
 	#Switch on detection for delete button:
-#	GPIO.add_event_detect(XX, GPIO.RISING, callback=delete_last_lap, bouncetime=200)
+#	GPIO.add_event_detect(PinResetLap, GPIO.RISING, callback=delete_last_lap, bouncetime=200)
 	if debugging:
 		print('Detection of delete button started.')
 
 	SomeoneDriving=False
+	
 def detect():  #Scans and evaluates QR-code
 	"""detects qr-code from camera and returns string.
 	String is shortened from 'QR-Code: ' and linefeed.
 	"""
+	global debugging
+	global PinWhite
+	global pyversion
+	
 	if debugging:
 		print('Start scanning')
 	#Make it bright
@@ -135,6 +158,9 @@ def delete_last_lap(): #deletes last recorded lap from memory and file
 	deletes the last recorded time from the list of elapsed times.
 	"""
 	global List_of_etimes
+	global debugging
+	global logfile
+	
 	List_of_etimes=List_of_etimes[:-1] #delete last tuple in list of elapsed times
 	if debugging:
 		print('Last entry in list of elapsed times was deleted.')
@@ -142,4 +168,5 @@ def delete_last_lap(): #deletes last recorded lap from memory and file
 	f=open(logfile, 'a')
 	filestr='Previous Lap is considered invalid.'
 	f.write(filestr)
+	f.close
 

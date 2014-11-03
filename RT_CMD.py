@@ -6,7 +6,7 @@
 import RPi.GPIO as GPIO
 import time, datetime, gspread, sys, os, subprocess
 from operator import itemgetter
-from RT_functions import *
+import RT_functions
 Version=001
 
 """Phototransistor for Start on GPIO 24, for Finish on 23.
@@ -30,7 +30,7 @@ GDOCS_PASSWORD = 'rjjmdlvqkvsvupwk'
 GDOCS_SPREADSHEET_NAME = 'Rallye-Meisterschaft'
 
 #Set true for debugging
-debugging=False
+debugging=True
 #Set true to upload data to google-spreadsheet:
 online=False
 
@@ -66,9 +66,11 @@ GPIO.setup(PinBarrierRight, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Light barrie
 GPIO.setup(PinGreen, GPIO.OUT, initial=0) #Green light (Startampel)
 GPIO.setup(PinYellow, GPIO.OUT, initial=0) #Yellow light (Startampel)
 GPIO.setup(PinRed, GPIO.OUT, initial=0) #Red light (Startampel)
-#GPIO.setup(XX, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Button to delete last lap
+#GPIO.setup(PinResetLap, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Button to delete last lap
 
 worksheet = None
+starttime = None
+
 #Welcome:
 os.system('clear')
 print('----------------------------------------------')
@@ -106,7 +108,7 @@ try:
 		#If no info for next driver available, try to read QR-Code
 		if len(NextDriver)<2 and GPIO.input(PinRed)==GPIO.HIGH:  #Try to find next driver
 			try:
-				Info_String=detect()
+				Info_String=RT_functions.detect()
 				if len(Info_String)>2:
 					#QR-Code read successful, split into strings
 					#for further processing
@@ -123,9 +125,9 @@ try:
 					GPIO.output(PinRed, 0) #red off
 					GPIO.output(PinYellow, 1) #yellow on
 			except:
-				time.sleep(3)       
 				if debugging:
-					print('Waiting in main loop..')
+					print('Error: ', sys.exc_info()[0])
+					time.sleep(3)       
 		if len(Driver)<2 and len(NextDriver)>2:   #update current driver with next
 			#Next driver found, switch variables:
 			Driver=NextDriver
@@ -213,4 +215,6 @@ except:  #Something unexpected went terribly wrong here...
 	GPIO.output(PinRed, 0) #red off
 	GPIO.cleanup() # reset GPIO
 	print('Something went wrong here...')
+	if debugging:
+		print('Error: ', sys.exc_info()[0])
 #End of Program
