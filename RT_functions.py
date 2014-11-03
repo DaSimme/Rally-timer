@@ -112,13 +112,10 @@ def Stop_timer(channel): #Stops timer and evaluates results
 
 	SomeoneDriving=False
 	
-def detect():  #Scans and evaluates QR-code
+def detect(debugging, PinWhite, pyversion):  #Scans and evaluates QR-code
 	"""detects qr-code from camera and returns string.
 	String is shortened from 'QR-Code: ' and linefeed.
 	"""
-	global debugging
-	global PinWhite
-	global pyversion
 	
 	if debugging:
 		print('Start scanning')

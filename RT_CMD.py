@@ -109,7 +109,7 @@ try:
 		#If no info for next driver available, try to read QR-Code
 		if len(NextDriver)<2 and GPIO.input(PinRed)==GPIO.HIGH:  #Try to find next driver
 			try:
-				Info_String=RT_functions.detect()
+				Info_String=RT_functions.detect(debugging, PinWhite, pyversion)
 				if len(Info_String)>2:
 					#QR-Code read successful, split into strings
 					#for further processing
@@ -128,7 +128,8 @@ try:
 			except:
 				if debugging:
 					print('Error: ', sys.exc_info()[0])
-					time.sleep(3)       
+					print('Failed scanning for Next Driver.')
+				time.sleep(3)       
 		if len(Driver)<2 and len(NextDriver)>2:   #update current driver with next
 			#Next driver found, switch variables:
 			Driver=NextDriver
