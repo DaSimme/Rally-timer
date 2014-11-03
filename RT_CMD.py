@@ -2,6 +2,7 @@
 #filename=RT_CMD.py
 
 """Command Line utility for rally timer. Requires module 'functions.py'."""
+#small change
 
 import RPi.GPIO as GPIO
 import time, datetime, gspread, sys, os, subprocess
