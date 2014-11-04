@@ -1,6 +1,7 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 #filename=functions.py
-
+import RPi.GPIO as GPIO
+import subprocess
 
 def login_open_sheet(email, password, spreadsheet):
 	"""This function is only used when RasPi is online to update logs to 
