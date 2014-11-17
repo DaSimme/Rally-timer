@@ -41,15 +41,10 @@ NextCarNumber=int()
 Car=str()
 NextCar=str()
 Lap=int()
-LastDriver=str()
-LastCarNumber=int()
-LastLap=int()
-Lasttime=str()
 starttime=0.0
 working_dir='/home/simme/Rallye/'
 MaxLaps=5
 CountingLaps=3
-SomeoneDriving=False
 
 # Set GPIO-pins:
 PinGreen=25 #Green traffic light on GPIO Pin 25
@@ -74,7 +69,6 @@ GPIO.setup(PinLaserStart, GPIO.OUT, initial=0)
 #GPIO.setup(PinResetLap, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Button to delete last lap
 
 worksheet = None
-starttime = None
 
 def login_open_sheet(email, password, spreadsheet):
 	"""This function is only used when RasPi is online to update logs to 
@@ -94,7 +88,6 @@ def Start_timer(channel):
 	is created. Start signal event is removed.
 	"""
 	global starttime
-	global SomeoneDriving
 	
 	starttime=time.time()
 	print("Start")
@@ -111,7 +104,6 @@ def Start_timer(channel):
 	#switch traffic light from green to red
 	GPIO.output(PinGreen, 0) #green off
 	GPIO.output(PinRed, 1) #red on
-	SomeoneDriving=True
 
 def Stop_timer(channel): #Stops timer and evaluates results
 	"""A stop signal is received -> save elapsed time to list of elapsed
@@ -233,9 +225,9 @@ def delete_last_lap(): #deletes last recorded lap from memory and file
 
 #Welcome:
 os.system('clear')
-print('------------------------------------------------')
-print('         Welcome to Simmes RC-Rallyetimer       ')
-print('------------------------------------------------')
+print('-----------------------------------------------------')
+print('         Welcome to Simmes RC-Rallyetimer            ')
+print('-----------------------------------------------------')
 
 if debugging:
 	print('Running on Python version:' + str(pyversion))
