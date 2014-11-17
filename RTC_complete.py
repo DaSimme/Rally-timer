@@ -2,12 +2,11 @@
 #filename=RT_CMD.py
 
 """Command Line utility for rally timer. Requires module 'functions.py'."""
-#small change
 
 import RPi.GPIO as GPIO
 import time, datetime, gspread, sys, os, subprocess
 from operator import itemgetter
-Version=001
+
 
 """Phototransistor for Start on GPIO 24, for Finish on 23.
 GPIO 18 controls additional light to enhance readability of QR-Codes.
@@ -30,7 +29,7 @@ GDOCS_PASSWORD = 'rjjmdlvqkvsvupwk'
 GDOCS_SPREADSHEET_NAME = 'Rallye-Meisterschaft'
 
 #Set true for debugging
-debugging=True
+debugging=False
 #Set true to upload data to google-spreadsheet:
 online=False
 
@@ -42,6 +41,10 @@ NextCarNumber=int()
 Car=str()
 NextCar=str()
 Lap=int()
+LastDriver=str()
+LastCarNumber=int()
+LastLap=int()
+Lasttime=str()
 starttime=0.0
 working_dir='/home/simme/Rallye/'
 MaxLaps=5
@@ -53,19 +56,21 @@ PinGreen=25 #Green traffic light on GPIO Pin 25
 PinYellow=27 #Yellow traffic light on GPIO Pin 27
 PinRed=22 #Red traffic light on GPIO Pin 22
 PinWhite=18 #White LED for QR-Code reading on Pin 18
-PinWhiteMaxBrightness=50 #Maximum brightness for white LED PWM
 PinBarrierRight=23 #Light barrier finish on right side (fototransistor)
-PinBarrierLeft=0 #Light barrier finish on right side (fototransistor)
+PinBarrierLeft=4 #Light barrier finish on right side (fototransistor)
 PinBarrierStart=24 #Light barrier start (fototransistor)
 PinResetLap=0 #Button to delete last lap
+PinLaserStart=8 #Control Laser for start barrier
+PinBarrierFinish=PinBarrierRight
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(PinWhite, GPIO.OUT, initial=0) #LEDs for QR-Code reading
 GPIO.setup(PinBarrierStart, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Light barrier start
-GPIO.setup(PinBarrierRight, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Light barrier finish
+GPIO.setup(PinBarrierFinish, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Light barrier finish
 GPIO.setup(PinGreen, GPIO.OUT, initial=0) #Green light (Startampel)
 GPIO.setup(PinYellow, GPIO.OUT, initial=0) #Yellow light (Startampel)
 GPIO.setup(PinRed, GPIO.OUT, initial=0) #Red light (Startampel)
+GPIO.setup(PinLaserStart, GPIO.OUT, initial=0)
 #GPIO.setup(PinResetLap, GPIO.IN, pull_up_down = GPIO.PUD_DOWN) #Button to delete last lap
 
 worksheet = None
@@ -93,12 +98,13 @@ def Start_timer(channel):
 	
 	starttime=time.time()
 	print("Start")
-	GPIO.add_event_detect(PinBarrierRight, GPIO.FALLING, callback=Stop_timer, bouncetime=200)
+	GPIO.add_event_detect(PinBarrierFinish, GPIO.FALLING, callback=Stop_timer, bouncetime=200)
 	if debugging:
 		print('STOP detection running')
 	GPIO.remove_event_detect(PinBarrierStart) #stop start detection
 	if debugging:
 		print('START detection terminated')
+	GPIO.output(PinLaserStart, 0) #Start Laser off
 	#GPIO.remove_event_detect(XX) #stop delete detection
 	if debugging:
 		print('Detection of delete button stopped.')
@@ -117,7 +123,6 @@ def Stop_timer(channel): #Stops timer and evaluates results
 	global GDOCS_PASSWORD
 	global GDOCS_SPREADSHEET_NAME
 	global Driver
-	global SomeoneDriving
 	global logfile
 	global Track
 	global CarNumber
@@ -145,7 +150,7 @@ def Stop_timer(channel): #Stops timer and evaluates results
 	f.write(filestring)
 	f.close()
 	#Append driver and elapsed time to List for evaluation:
-	List_of_etimes.append([Driver,elapsedtime])
+	List_of_etimes.append([Driver,elapsedtime,timestring])
 	#If raspberry is online, same info is written to google-spreadsheet
 	if online:
 		if worksheet is None:
@@ -160,15 +165,13 @@ def Stop_timer(channel): #Stops timer and evaluates results
 	#Reset driver
 	Driver=str()
 	#Remove event for stop detection
-	GPIO.remove_event_detect(PinBarrierRight)
+	GPIO.remove_event_detect(PinBarrierFinish)
 	if debugging:
 		print('Terminated STOP detection.')
 	#Switch on detection for delete button:
 #	GPIO.add_event_detect(PinResetLap, GPIO.RISING, callback=delete_last_lap, bouncetime=200)
 	if debugging:
 		print('Detection of delete button started.')
-
-	SomeoneDriving=False
 	
 def detect(debugging, PinWhite, pyversion):  #Scans and evaluates QR-code
 	"""detects qr-code from camera and returns string.
@@ -230,9 +233,9 @@ def delete_last_lap(): #deletes last recorded lap from memory and file
 
 #Welcome:
 os.system('clear')
-print('----------------------------------------------')
-print('         Welcome to Simmes RC-Rallyetimer     ')
-print('----------------------------------------------')
+print('------------------------------------------------')
+print('         Welcome to Simmes RC-Rallyetimer       ')
+print('------------------------------------------------')
 
 if debugging:
 	print('Running on Python version:' + str(pyversion))
@@ -288,33 +291,50 @@ try:
 				time.sleep(3)       
 		if len(Driver)<2 and len(NextDriver)>2:   #update current driver with next
 			#Next driver found, switch variables:
+			if debugging:
+				print('Updating Variables')
 			Driver=NextDriver
 			CarNumber=NextCarNumber
 			Car=NextCar
 			NextDriver=str()
 			NextCarNumber=int()
 			NextCar=str()
+			if debugging:
+				print('Check for previous laps of driver:')
+				print(str(len(List_of_etimes)))
 			#Check for laps driven by driver:
 			Lap=1  #if no previous laps found, start with 1st
 			for tuple in List_of_etimes:
 				if tuple[0]==Driver:
 					if debugging:
-						print 'Lap of driver found'
+						print('Lap of driver found')
 					Lap+=1  #increase Lap count
 			if Lap==1:  #New driver, add to list
 				List_of_Drivers.append(Driver)	
 			#Show new screen while ready for start:
-			os.system('clear')            
+			if debugging:
+				pass
+			else:
+				os.system('clear')  
+			if len(List_of_etimes)>0:
+				if debugging:
+					print('Try to catch last driver')
+					print(List_of_etimes[-1][0])
+				previous_driver=str(List_of_etimes[-1][0])
+				previous_time=str(List_of_etimes[-1][2])
+				print('Previous Driver: ' + previous_driver + ', time: ' + previous_time + '.')
 			print('Now driving: '+Driver+', Lap '+str(Lap))
 			#Initialize start detection:
+			GPIO.output(PinLaserStart, 1)
+			time.sleep(0.5)
 			GPIO.add_event_detect(PinBarrierStart, GPIO.FALLING, callback=Start_timer, bouncetime=200)
 			if debugging:
 				print('Start detection running')
 			#switch traffic light from yellow to green
 			GPIO.output(PinYellow, 0) #yellow off
 			GPIO.output(PinGreen, 1) #green on
-			#Wait 6 seconds before scanning for next driver:
-			time.sleep(6)
+			#Wait 3 seconds before scanning for next driver:
+			time.sleep(3)
 	#End of main loop
 except KeyboardInterrupt:  #User interrupt, evaluate results and quit
 	GPIO.output(PinWhite, GPIO.LOW) #make sure the lights are switched off
